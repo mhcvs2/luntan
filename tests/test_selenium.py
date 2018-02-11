@@ -3,7 +3,7 @@ import threading
 import time
 import unittest
 from selenium import webdriver
-from app import create_app, db
+from app import create_app, db, fake
 from app.models import Role, User, Post
 
 
@@ -12,9 +12,11 @@ class SeleniumTestCase(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
-        # start Firefox
+        # start Chrome
+        options = webdriver.ChromeOptions()
+        options.add_argument('headless')
         try:
-            cls.client = webdriver.Firefox()
+            cls.client = webdriver.Chrome(chrome_options=options)
         except:
             pass
 
@@ -33,11 +35,11 @@ class SeleniumTestCase(unittest.TestCase):
             # create the database and populate with some fake data
             db.create_all()
             Role.insert_roles()
-            User.generate_fake(10)
-            Post.generate_fake(10)
+            fake.users(10)
+            fake.posts(10)
 
             # add an administrator user
-            admin_role = Role.query.filter_by(permissions=0xff).first()
+            admin_role = Role.query.filter_by(name='Administrator').first()
             admin = User(email='john@example.com',
                          username='john', password='cat',
                          role=admin_role, confirmed=True)
@@ -45,7 +47,9 @@ class SeleniumTestCase(unittest.TestCase):
             db.session.commit()
 
             # start the Flask server in a thread
-            threading.Thread(target=cls.app.run).start()
+            cls.server_thread = threading.Thread(target=cls.app.run,
+                                                 kwargs={'debug': False})
+            cls.server_thread.start()
 
             # give the server a second to ensure it is up
             time.sleep(1) 
@@ -55,7 +59,8 @@ class SeleniumTestCase(unittest.TestCase):
         if cls.client:
             # stop the flask server and the browser
             cls.client.get('http://localhost:5000/shutdown')
-            cls.client.close()
+            cls.client.quit()
+            cls.server_thread.join()
 
             # destroy database
             db.drop_all()
@@ -79,7 +84,7 @@ class SeleniumTestCase(unittest.TestCase):
 
         # navigate to login page
         self.client.find_element_by_link_text('Log In').click()
-        self.assertTrue('<h1>Login</h1>' in self.client.page_source)
+        self.assertIn('<h1>Login</h1>', self.client.page_source)
 
         # login
         self.client.find_element_by_name('email').\
@@ -90,4 +95,4 @@ class SeleniumTestCase(unittest.TestCase):
 
         # navigate to the user's profile page
         self.client.find_element_by_link_text('Profile').click()
-        self.assertTrue('<h1>john</h1>' in self.client.page_source)
+        self.assertIn('<h1>john</h1>', self.client.page_source)

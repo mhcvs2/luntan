@@ -15,7 +15,7 @@ def before_request():
         current_user.ping()
         if not current_user.confirmed \
                 and request.endpoint \
-                and request.endpoint[:5] != 'auth.' \
+                and request.blueprint != 'auth' \
                 and request.endpoint != 'static':
             return redirect(url_for('auth.unconfirmed'))
 
@@ -34,7 +34,10 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
         if user is not None and user.verify_password(form.password.data):
             login_user(user, form.remember_me.data)
-            return redirect(request.args.get('next') or url_for('main.index'))
+            next = request.args.get('next')
+            if next is None or not next.startswith('/'):
+                next = url_for('main.index')
+            return redirect(next)
         flash('Invalid username or password.')
     return render_template('auth/login.html', form=form)
 
@@ -70,6 +73,7 @@ def confirm(token):
     if current_user.confirmed:
         return redirect(url_for('main.index'))
     if current_user.confirm(token):
+        db.session.commit()
         flash('You have confirmed your account. Thanks!')
     else:
         flash('The confirmation link is invalid or has expired.')
@@ -94,6 +98,7 @@ def change_password():
         if current_user.verify_password(form.old_password.data):
             current_user.password = form.password.data
             db.session.add(current_user)
+            db.session.commit()
             flash('Your password has been updated.')
             return redirect(url_for('main.index'))
         else:
@@ -126,10 +131,8 @@ def password_reset(token):
         return redirect(url_for('main.index'))
     form = PasswordResetForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user is None:
-            return redirect(url_for('main.index'))
-        if user.reset_password(token, form.password.data):
+        if User.reset_password(token, form.password.data):
+            db.session.commit()
             flash('Your password has been updated.')
             return redirect(url_for('auth.login'))
         else:
@@ -137,7 +140,7 @@ def password_reset(token):
     return render_template('auth/reset_password.html', form=form)
 
 
-@auth.route('/change-email', methods=['GET', 'POST'])
+@auth.route('/change_email', methods=['GET', 'POST'])
 @login_required
 def change_email_request():
     form = ChangeEmailForm()
@@ -156,10 +159,11 @@ def change_email_request():
     return render_template("auth/change_email.html", form=form)
 
 
-@auth.route('/change-email/<token>')
+@auth.route('/change_email/<token>')
 @login_required
 def change_email(token):
     if current_user.change_email(token):
+        db.session.commit()
         flash('Your email address has been updated.')
     else:
         flash('Invalid request.')
