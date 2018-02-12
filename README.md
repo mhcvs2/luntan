@@ -1,11 +1,26 @@
 Flasky
 ======
 
-This repository contains the source code examples for the second edition of my O'Reilly book [Flask Web Development](http://www.flaskbook.com).
+<pre>
+export SECRET_KEY=qq77aa88
 
-The commits and tags in this repository were carefully created to match the sequence in which concepts are presented in the book. Please read the section titled "How to Work with the Example Code" in the book's preface for instructions.
+export MAIL_SERVER=smtp.qq.com
 
-For Readers of the First Edition of the Book
---------------------------------------------
+export MAIL_USERNAME=591867837@qq.com
 
-The code examples for the first edition of the book were moved to a different repository: [https://github.com/miguelgrinberg/flasky-first-edition](https://github.com/miguelgrinberg/flasky-first-edition).
+export MAIL_PASSWORD=
+
+export FLASKY_ADMIN=591867837@qq.com
+
+export DEV_DATABASE_URL=mysql://root:root.123@127.0.0.1/blog
+
+
+
+export FLASK_APP=flasky.py
+
+export FLASK_CONFIG=development
+
+flask deploy   (just first time)
+
+flask run
+</pre>
