@@ -70,7 +70,7 @@ def profile(length, profile_dir):
 def deploy():
     """Run deployment tasks."""
     # migrate database to latest revision
-    # upgrade()
+    upgrade()
 
     # create or update user roles
     Role.insert_roles()
